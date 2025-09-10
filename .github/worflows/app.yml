@@ -1,0 +1,58 @@
+name: Deploy Flask App
+
+on:  
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Criar chave temporária para acesso SSH
+        run: |
+          echo "${{ secrets.KEY }}" > /tmp/private_key
+          chmod 600 /tmp/private_key
+
+      - name: Criar pasta da aplicação no servidor
+        run: |
+          ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
+          "mkdir -p /home/ubuntu/flaskapp"
+
+      - name: Ajustar permissões da pasta
+        run: |
+          ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
+          "sudo chown -R ubuntu:ubuntu /home/ubuntu/flaskapp && sudo chmod -R 755 /home/ubuntu/flaskapp"
+                      
+      - name: Transferir arquivos para o servidor
+        run: |
+          scp -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ${{ github.workspace }}/* ubuntu@${{ secrets.HOST }}:/home/ubuntu/flaskapp
+
+      - name: Reiniciar serviço Flask
+        run: |
+          ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
+          "sudo systemctl restart flaskapp.service"
+
+      - name: Remover chave privada temporária
+        run: |
+          rm /tmp/private_key
+
+      - name: Notificar no Discord - SUCESSO
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d '{"content":"✅ Deploy Flask finalizado com sucesso no servidor!"}' \
+            ${{ secrets.DISCORD }}
+
+      - name: Notificar no Discord - FALHA
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d '{"content":"❌ Deploy Flask falhou! Verifique os logs do GitHub Actions."}' \
+            ${{ secrets.DISCORD }}
