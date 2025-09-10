@@ -21,21 +21,21 @@ jobs:
       - name: Criar pasta da aplicação no servidor
         run: |
           ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
-          "mkdir -p /home/ubuntu/flaskapp"
+          "mkdir -p /home/ubuntu/"
 
       - name: Criar backup da aplicação atual
         run: |
           ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
-          "if [ -d /home/ubuntu/flaskapp ]; then timestamp=$(date +'%Y%m%d%H%M%S'); sudo cp -r /home/ubuntu/flaskapp /home/ubuntu/flaskapp_backup_\$timestamp; fi"
+          "if [ -d /home/ubuntu/ ]; then timestamp=$(date +'%Y%m%d%H%M%S'); sudo cp -r /home/ubuntu/ /home/ubuntu/flaskapp_backup_\$timestamp; fi"
 
       - name: Ajustar permissões da pasta
         run: |
           ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
-          "sudo chown -R ubuntu:ubuntu /home/ubuntu/flaskapp && sudo chmod -R 755 /home/ubuntu/flaskapp"
+          "sudo chown -R ubuntu:ubuntu /home/ubuntu/ && sudo chmod -R 755 /home/ubuntu/"
 
       - name: Transferir arquivos para o servidor
         run: |
-          scp -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ${{ github.workspace }}/* ubuntu@${{ secrets.HOST }}:/home/ubuntu/flaskapp
+          scp -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ${{ github.workspace }}/* ubuntu@${{ secrets.HOST }}:/home/ubuntu/
 
       - name: Reiniciar serviço Flask
         run: |
