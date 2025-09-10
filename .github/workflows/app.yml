@@ -23,11 +23,16 @@ jobs:
           ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
           "mkdir -p /home/ubuntu/flaskapp"
 
+      - name: Criar backup da aplicação atual
+        run: |
+          ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
+          "if [ -d /home/ubuntu/flaskapp ]; then timestamp=$(date +'%Y%m%d%H%M%S'); sudo cp -r /home/ubuntu/flaskapp /home/ubuntu/flaskapp_backup_\$timestamp; fi"
+
       - name: Ajustar permissões da pasta
         run: |
           ssh -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.HOST }} \
           "sudo chown -R ubuntu:ubuntu /home/ubuntu/flaskapp && sudo chmod -R 755 /home/ubuntu/flaskapp"
-                      
+
       - name: Transferir arquivos para o servidor
         run: |
           scp -i /tmp/private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ${{ github.workspace }}/* ubuntu@${{ secrets.HOST }}:/home/ubuntu/flaskapp
@@ -46,7 +51,9 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d '{"content":"✅ Deploy Flask finalizado com sucesso no servidor!"}' \
+            -d '{
+              "content":"✅ Deploy Flask finalizado com sucesso!\n- Branch: ${{ github.ref_name }}\n- Commit: ${{ github.sha }}\n- Autor: ${{ github.actor }}\n- Mensagem: ${{ github.event.head_commit.message }}"
+            }' \
             ${{ secrets.DISCORD }}
 
       - name: Notificar no Discord - FALHA
@@ -54,5 +61,7 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d '{"content":"❌ Deploy Flask falhou! Verifique os logs do GitHub Actions."}' \
+            -d '{
+              "content":"❌ Deploy Flask falhou!\n- Branch: ${{ github.ref_name }}\n- Commit: ${{ github.sha }}\n- Autor: ${{ github.actor }}\n- Mensagem: ${{ github.event.head_commit.message }}\nVerifique os logs do GitHub Actions."
+            }' \
             ${{ secrets.DISCORD }}
